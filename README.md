@@ -22,8 +22,15 @@ A leaderboard will rank submissions based on a composite score. Latency will be 
 To avoid version conflicts (especially with Keras 3 or GLIBCXX), use the provided conda environment:
 
 ```bash
+module load gcc
+module load cuda
 conda env create -f env.yml python=3.11,7
 conda activate vww_env
+```
+
+DO NOT RUN: 
+```bash
+module load miniconda
 ```
 
 ## Dataset Preparation
