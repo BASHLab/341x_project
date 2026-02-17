@@ -289,7 +289,8 @@ You may use:
 - Quantization-aware training
 - Structured or unstructured pruning
 - Knowledge distillation
-- Architecture modifications (if approved)
+- Architecture modifications
+- Data Augmentation (but no data movement between splits are allowed)
 
 You may NOT:
 - Train or tune using `test_hidden.txt`
