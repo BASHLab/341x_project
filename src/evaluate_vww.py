@@ -240,8 +240,8 @@ def main():
                         help="Compute competition score (requires TFLite model)")
     parser.add_argument("--export_json", action="store_true",
                         help="Export metadata JSON for Pi deployment (if accuracy >= 80%%)")
-    parser.add_argument("--threads", type=int, default=NUM_THREADS,
-                        help=f"Number of threads for TFLite (default: {NUM_THREADS})")
+    parser.add_argument("--threads", type=int, default=1,
+                        help=f"Number of threads for TFLite (default: {1})")
     args = parser.parse_args()
     
     # Override directories if provided
@@ -250,7 +250,8 @@ def main():
         BASE_DIR = args.data_dir
     if args.splits_dir:
         SPLITS_DIR = args.splits_dir
-    NUM_THREADS = args.threads
+    if args.threads:
+        NUM_THREADS = args.threads
     
     # Validate test set usage
     if args.split in ["test_public", "test_hidden"]:
