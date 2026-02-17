@@ -45,33 +45,15 @@ wget https://www.silabs.com/public/files/github/machine_learning/benchmarks/data
 tar -xvf vw_coco2014_96.tar.gz
 ```
 
-### 2. Create Deterministic Data Splits
+### 2. Deterministic Data Splits
 
-Run this script to create train/val/test_public splits with proper stratification:
-
-```bash
-python src/create_main_datasplit.py --data vw_coco2014_96 --out splits
-```
-
-This creates manifest files in the `splits/` directory (no files are moved):
+All manifest files are in the `splits/` directory (no files are moved):
 
 ```
 splits/
 ├── train.txt          # Training set
 ├── val.txt            # Validation set
 └── test_public.txt    # Public test set
-```
-
-**For instructors only:** To generate the hidden test set, add the `--write_hidden` flag:
-
-```bash
-python src/create_main_datasplit.py --data vw_coco2014_96 --out splits --write_hidden
-```
-
-This will additionally create:
-```
-splits/
-└── test_hidden.txt    # Hidden test set (instructor-only)
 ```
 
 Each manifest contains one relative file path per line, e.g.:
