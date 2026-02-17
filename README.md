@@ -160,6 +160,9 @@ python src/evaluate_vww.py --model trained_models/vww_96.h5 --split val
 
 # On Raspberry Pi
 python src/scoreboard.py --model models/vww_96.tflite --split val
+
+# Quick profiling on Pi (limited images for faster iteration)
+python src/scoreboard.py --model models/my_model.tflite --split val --max_images 100
 ```
 
 ### Pre-Submission: Evaluate on test_public

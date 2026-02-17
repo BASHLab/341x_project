@@ -162,28 +162,21 @@ def evaluate_tflite_model(model_path, manifest_path, measure_latency=True):
     total = 0
     latencies = []
     
-    # Warmup phase (not counted in accuracy or latency)
+    # Single evaluation loop: accuracy on ALL images, latency on post-warmup only
     warmup_count = WARMUP_IMAGES if measure_latency else 0
-    if warmup_count > 0 and len(image_paths) > warmup_count:
-        print(f"\n[WARMUP] Running {warmup_count} warmup inferences (not counted)...")
-        for i in range(warmup_count):
-            rel_path = image_paths[i]
-            full_path = os.path.join(BASE_DIR, rel_path)
-            img = load_and_preprocess_image(full_path, use_tflite=True)
-            interpreter.set_tensor(input_details[0]['index'], img)
-            interpreter.invoke()
-        print("[WARMUP] Complete\n")
-    else:
+    if warmup_count > len(image_paths):
         warmup_count = 0
     
-    # Actual evaluation (all images for accuracy, post-warmup for latency)
-    print("[EVALUATION] Starting evaluation...")
+    if warmup_count > 0:
+        print(f"\n[EVALUATION] Starting evaluation (first {warmup_count} images are warmup)...")
+    else:
+        print("\n[EVALUATION] Starting evaluation...")
+    
     for idx, rel_path in enumerate(image_paths):
         full_path = os.path.join(BASE_DIR, rel_path)
         true_label = 1 if rel_path.startswith('person/') else 0
         
-        # Time full pipeline: preprocessing + inference + output retrieval
-        # Only record latency for post-warmup images
+        # Time full pipeline for post-warmup images only
         if measure_latency and idx >= warmup_count:
             start_time = time.perf_counter()
             img = load_and_preprocess_image(full_path, use_tflite=True)
@@ -194,6 +187,7 @@ def evaluate_tflite_model(model_path, manifest_path, measure_latency=True):
             end_time = time.perf_counter()
             latencies.append((end_time - start_time) * 1000)  # Convert to ms
         else:
+            # Warmup images or no latency measurement: just evaluate accuracy
             img = load_and_preprocess_image(full_path, use_tflite=True)
             interpreter.set_tensor(input_details[0]['index'], img)
             interpreter.invoke()

@@ -170,20 +170,10 @@ def evaluate_manifest(
 
     proc = psutil.Process(os.getpid()) if psutil else None
 
-    # Warmup phase (not counted in metrics)
+    # Single evaluation loop: accuracy on ALL images, latency on post-warmup only
     warmup_actual = min(warmup, len(image_rel_paths))
-    print(f"\n[WARMUP] Running {warmup_actual} warmup inferences...")
-    for i in range(warmup_actual):
-        rel_path = image_rel_paths[i]
-        full_path = os.path.join(base_dir, rel_path)
-        x = load_and_preprocess_image(full_path, (H, W))
-        interpreter.set_tensor(input_details[0]["index"], x)
-        interpreter.invoke()
-        _ = interpreter.get_tensor(output_details[0]["index"])
-    print("[WARMUP] Complete\n")
-
-    # Evaluation phase: accuracy on ALL images, latency on post-warmup only
-    print("[EVALUATION] Starting evaluation...")
+    print(f"\n[EVALUATION] Starting evaluation (first {warmup_actual} images are warmup)...")
+    
     for i, rel_path in enumerate(image_rel_paths):
         full_path = os.path.join(base_dir, rel_path)
         true_label = 1 if rel_path.startswith('person/') else 0
@@ -320,18 +310,10 @@ def evaluate_directory(
     print(f"[INFO] Warmup: {warmup} images")
     print(f"[INFO] Threads: {num_threads}")
 
-    # Warmup phase
+    # Single evaluation loop: accuracy on ALL images, latency on post-warmup only
     warmup_actual = min(warmup, len(image_paths))
-    print(f"\n[WARMUP] Running {warmup_actual} warmup inferences...")
-    for i in range(warmup_actual):
-        x = load_and_preprocess_image(image_paths[i], (H, W))
-        interpreter.set_tensor(input_details[0]["index"], x)
-        interpreter.invoke()
-        _ = interpreter.get_tensor(output_details[0]["index"])
-    print("[WARMUP] Complete\n")
-
-    # Evaluation phase: accuracy on ALL images, latency on post-warmup only
-    print("[EVALUATION] Starting evaluation...")
+    print(f"\n[EVALUATION] Starting evaluation (first {warmup_actual} images are warmup)...")
+    
     for i, (path, y) in enumerate(zip(image_paths, labels)):
         # Time only post-warmup images
         if i >= warmup_actual:
@@ -449,7 +431,8 @@ def main():
         # Force consistent threading for official evaluation
         if args.threads != 1:
             print(f"[WARN] Official mode requires --threads=1 for fairness. Overriding --threads={args.threads} to 1.")
-            args.threads = 1
+        args.threads = 1  # Always enforce threads=1 in official mode
+        
         print("\n" + "="*60)
         print("🔒 OFFICIAL EVALUATION MODE - TEST_HIDDEN")
         print("="*60)
@@ -464,6 +447,22 @@ def main():
         print(f"  - Warmup: {args.warmup} images")
         print("="*60 + "\n")
 
+    # Prevent manual access to test_hidden without --official flag
+    if args.split == "test_hidden" and not args.official:
+        print("\n" + "="*60)
+        print("[ERROR] Access to test_hidden requires --official flag")
+        print("="*60)
+        print("test_hidden is restricted to official competition scoring.")
+        print()
+        print("To access test_hidden, use:")
+        print("  python src/scoreboard.py --model <model> --official --compute_score")
+        print()
+        print("For development, use:")
+        print("  --split val        (for development and model selection)")
+        print("  --split test_public (for final evaluation before submission)")
+        print("="*60)
+        return 1  # Exit with error code
+
     # Determine evaluation mode
     use_manifest = args.split is not None
     
@@ -472,7 +471,7 @@ def main():
         if not os.path.exists(manifest_path):
             print(f"[ERROR] Manifest not found: {manifest_path}")
             print("Run create_main_datasplit.py first to generate splits.")
-            return
+            return 1
         
         # Validate test set usage
         if args.split == "test_public":
@@ -492,10 +491,10 @@ def main():
     else:
         if not args.data:
             print("[ERROR] Must specify either --split or --data")
-            return
+            return 1
         if not os.path.exists(args.data):
             print(f"[ERROR] Data directory not found: {args.data}")
-            return
+            return 1
 
     # Capture device info
     device = read_device_info()
