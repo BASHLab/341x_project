@@ -47,7 +47,7 @@ tar -xvf vw_coco2014_96.tar.gz
 
 ### 2. Create Deterministic Data Splits
 
-Run this script to create train/val/test_public/test_hidden splits with proper stratification:
+Run this script to create train/val/test_public splits with proper stratification:
 
 ```bash
 python src/create_main_datasplit.py --data vw_coco2014_96 --out splits
@@ -59,7 +59,18 @@ This creates manifest files in the `splits/` directory (no files are moved):
 splits/
 ├── train.txt          # Training set
 ├── val.txt            # Validation set
-├── test_public.txt    # Public test set
+└── test_public.txt    # Public test set
+```
+
+**For instructors only:** To generate the hidden test set, add the `--write_hidden` flag:
+
+```bash
+python src/create_main_datasplit.py --data vw_coco2014_96 --out splits --write_hidden
+```
+
+This will additionally create:
+```
+splits/
 └── test_hidden.txt    # Hidden test set (instructor-only)
 ```
 
@@ -78,7 +89,7 @@ non_person/004567.jpg
 
 **Leaderboard scoring uses `test_hidden.txt`, which is:**
 - Disjoint from all public splits
-- Instructor-only
+- Instructor-only (requires `--write_hidden` flag to generate)
 - Not available to students
 - Used for official competition ranking
 

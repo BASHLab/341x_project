@@ -166,9 +166,10 @@ def evaluate_manifest(
 
     proc = psutil.Process(os.getpid()) if psutil else None
 
-    # Warmup phase (not counted)
-    print(f"\n[WARMUP] Running {min(warmup, len(image_rel_paths))} warmup inferences...")
-    for i in range(min(warmup, len(image_rel_paths))):
+    # Warmup phase (not counted in metrics)
+    warmup_actual = min(warmup, len(image_rel_paths))
+    print(f"\n[WARMUP] Running {warmup_actual} warmup inferences...")
+    for i in range(warmup_actual):
         rel_path = image_rel_paths[i]
         full_path = os.path.join(base_dir, rel_path)
         x = load_and_preprocess_image(full_path, (H, W))
@@ -177,35 +178,43 @@ def evaluate_manifest(
         _ = interpreter.get_tensor(output_details[0]["index"])
     print("[WARMUP] Complete\n")
 
-    # Timed evaluation phase
-    print("[EVALUATION] Starting timed evaluation...")
-    for i, rel_path in enumerate(image_rel_paths[warmup:], start=1):
+    # Evaluation phase: accuracy on ALL images, latency on post-warmup only
+    print("[EVALUATION] Starting evaluation...")
+    for i, rel_path in enumerate(image_rel_paths):
         full_path = os.path.join(base_dir, rel_path)
         true_label = 1 if rel_path.startswith('person/') else 0
         
-        t0 = time.perf_counter_ns()
-        x = load_and_preprocess_image(full_path, (H, W))
-        t1 = time.perf_counter_ns()
+        # Time only post-warmup images
+        if i >= warmup_actual:
+            t0 = time.perf_counter_ns()
+            x = load_and_preprocess_image(full_path, (H, W))
+            t1 = time.perf_counter_ns()
 
-        interpreter.set_tensor(input_details[0]["index"], x)
-        interpreter.invoke()
-        out = interpreter.get_tensor(output_details[0]["index"])
-        t2 = time.perf_counter_ns()
+            interpreter.set_tensor(input_details[0]["index"], x)
+            interpreter.invoke()
+            out = interpreter.get_tensor(output_details[0]["index"])
+            t2 = time.perf_counter_ns()
 
-        # Timings in milliseconds
-        pp = (t1 - t0) / 1e6
-        inf = (t2 - t1) / 1e6
-        tot = (t2 - t0) / 1e6
-        preprocess_ms.append(pp)
-        infer_ms.append(inf)
-        total_ms.append(tot)
+            # Timings in milliseconds
+            pp = (t1 - t0) / 1e6
+            inf = (t2 - t1) / 1e6
+            tot = (t2 - t0) / 1e6
+            preprocess_ms.append(pp)
+            infer_ms.append(inf)
+            total_ms.append(tot)
+        else:
+            # Warmup images: evaluate accuracy but don't time
+            x = load_and_preprocess_image(full_path, (H, W))
+            interpreter.set_tensor(input_details[0]["index"], x)
+            interpreter.invoke()
+            out = interpreter.get_tensor(output_details[0]["index"])
 
         pred = int(np.argmax(out))
         correct += int(pred == true_label)
         total += 1
 
-        # Peak RSS sampling
-        if proc and (i % rss_sample_every == 0):
+        # Peak RSS sampling (only on post-warmup for consistency)
+        if proc and i >= warmup_actual and ((i - warmup_actual + 1) % rss_sample_every == 0):
             try:
                 rss_mb = proc.memory_info().rss / (1024 * 1024)
                 peak_rss_mb_psutil = max(peak_rss_mb_psutil, rss_mb)
@@ -304,38 +313,47 @@ def evaluate_directory(
     print(f"[INFO] Threads: {num_threads}")
 
     # Warmup phase
-    print(f"\n[WARMUP] Running {min(warmup, len(image_paths))} warmup inferences...")
-    for i in range(min(warmup, len(image_paths))):
+    warmup_actual = min(warmup, len(image_paths))
+    print(f"\n[WARMUP] Running {warmup_actual} warmup inferences...")
+    for i in range(warmup_actual):
         x = load_and_preprocess_image(image_paths[i], (H, W))
         interpreter.set_tensor(input_details[0]["index"], x)
         interpreter.invoke()
         _ = interpreter.get_tensor(output_details[0]["index"])
     print("[WARMUP] Complete\n")
 
-    # Timed phase
-    print("[EVALUATION] Starting timed evaluation...")
-    for i, (path, y) in enumerate(zip(image_paths[warmup:], labels[warmup:]), start=1):
-        t0 = time.perf_counter_ns()
-        x = load_and_preprocess_image(path, (H, W))
-        t1 = time.perf_counter_ns()
+    # Evaluation phase: accuracy on ALL images, latency on post-warmup only
+    print("[EVALUATION] Starting evaluation...")
+    for i, (path, y) in enumerate(zip(image_paths, labels)):
+        # Time only post-warmup images
+        if i >= warmup_actual:
+            t0 = time.perf_counter_ns()
+            x = load_and_preprocess_image(path, (H, W))
+            t1 = time.perf_counter_ns()
 
-        interpreter.set_tensor(input_details[0]["index"], x)
-        interpreter.invoke()
-        out = interpreter.get_tensor(output_details[0]["index"])
-        t2 = time.perf_counter_ns()
+            interpreter.set_tensor(input_details[0]["index"], x)
+            interpreter.invoke()
+            out = interpreter.get_tensor(output_details[0]["index"])
+            t2 = time.perf_counter_ns()
 
-        pp = (t1 - t0) / 1e6
-        inf = (t2 - t1) / 1e6
-        tot = (t2 - t0) / 1e6
-        preprocess_ms.append(pp)
-        infer_ms.append(inf)
-        total_ms.append(tot)
+            pp = (t1 - t0) / 1e6
+            inf = (t2 - t1) / 1e6
+            tot = (t2 - t0) / 1e6
+            preprocess_ms.append(pp)
+            infer_ms.append(inf)
+            total_ms.append(tot)
+        else:
+            # Warmup images: evaluate accuracy but don't time
+            x = load_and_preprocess_image(path, (H, W))
+            interpreter.set_tensor(input_details[0]["index"], x)
+            interpreter.invoke()
+            out = interpreter.get_tensor(output_details[0]["index"])
 
         pred = int(np.argmax(out))
         correct += int(pred == y)
         total += 1
 
-        if proc and (i % rss_sample_every == 0):
+        if proc and i >= warmup_actual and ((i - warmup_actual + 1) % rss_sample_every == 0):
             try:
                 rss_mb = proc.memory_info().rss / (1024 * 1024)
                 peak_rss_mb_psutil = max(peak_rss_mb_psutil, rss_mb)
