@@ -6,10 +6,15 @@ https://github.com/SiliconLabs/platform_ml_models/blob/master/eembc/Person_detec
 import numpy as np
 
 import tensorflow as tf
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Activation, Flatten, BatchNormalization
-from tensorflow.keras.layers import Conv2D, DepthwiseConv2D, AveragePooling2D, MaxPooling2D
-from tensorflow.keras.regularizers import l2
+from keras.models import Model
+# from tensorflow.keras.models import Model
+# from tensorflow.keras.layers import Input, Dense, Activation, Flatten, BatchNormalization
+# from tensorflow.keras.layers import Conv2D, DepthwiseConv2D, AveragePooling2D, MaxPooling2D
+# from tensorflow.keras.regularizers import l2
+from keras.layers import Input, Dense, Activation, Flatten, BatchNormalization
+from keras.layers import Conv2D, DepthwiseConv2D, AveragePooling2D, MaxPooling2D
+from keras.regularizers import l2
+from scipy import ndimage
 
 #define model
 def mobilenet_v1():
