@@ -22,6 +22,51 @@ BATCH_SIZE = 32
 EPOCHS = 20
 
 BASE_DIR = os.path.join(os.getcwd(), 'vw_coco2014_96')
+SPLITS_DIR = os.path.join(os.getcwd(), 'splits')
+
+
+def load_manifest(manifest_path):
+  """Load image paths from manifest file."""
+  with open(manifest_path, 'r') as f:
+    return [line.strip() for line in f if line.strip()]
+
+
+def create_generator_from_manifest(manifest_path, augment=False):
+  """Create data generator from manifest file."""
+  image_paths = load_manifest(manifest_path)
+  
+  # Create full paths and labels
+  filepaths = [os.path.join(BASE_DIR, path) for path in image_paths]
+  labels = [0 if path.startswith('non_person/') else 1 for path in image_paths]
+  
+  if augment:
+    datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+        rotation_range=10,
+        width_shift_range=0.05,
+        height_shift_range=0.05,
+        zoom_range=.1,
+        horizontal_flip=True,
+        rescale=1. / 255)
+  else:
+    datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+        rescale=1. / 255)
+  
+  # Create dataframe for flow_from_dataframe
+  import pandas as pd
+  df = pd.DataFrame({'filename': filepaths, 'class': labels})
+  df['class'] = df['class'].astype(str)
+  
+  generator = datagen.flow_from_dataframe(
+      df,
+      x_col='filename',
+      y_col='class',
+      target_size=(IMAGE_SIZE, IMAGE_SIZE),
+      batch_size=BATCH_SIZE,
+      class_mode='categorical',
+      color_mode='rgb',
+      shuffle=augment)
+  
+  return generator
 
 
 def main(argv):
@@ -32,29 +77,12 @@ def main(argv):
 
   model.summary()
 
-  batch_size = 50
-  validation_split = 0.1
-
-  datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-      rotation_range=10,
-      width_shift_range=0.05,
-      height_shift_range=0.05,
-      zoom_range=.1,
-      horizontal_flip=True,
-      validation_split=validation_split,
-      rescale=1. / 255)
-  train_generator = datagen.flow_from_directory(
-      BASE_DIR,
-      target_size=(IMAGE_SIZE, IMAGE_SIZE),
-      batch_size=BATCH_SIZE,
-      subset='training',
-      color_mode='rgb')
-  val_generator = datagen.flow_from_directory(
-      BASE_DIR,
-      target_size=(IMAGE_SIZE, IMAGE_SIZE),
-      batch_size=BATCH_SIZE,
-      subset='validation',
-      color_mode='rgb')
+  # Load data from manifest files
+  train_generator = create_generator_from_manifest(
+      os.path.join(SPLITS_DIR, 'train.txt'), augment=True)
+  val_generator = create_generator_from_manifest(
+      os.path.join(SPLITS_DIR, 'val.txt'), augment=False)
+  
   print(train_generator.class_indices)
 
   model = train_epochs(model, train_generator, val_generator, 20, 0.001)
