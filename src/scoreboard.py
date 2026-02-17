@@ -181,7 +181,7 @@ def evaluate_manifest(
     print("[EVALUATION] Starting timed evaluation...")
     for i, rel_path in enumerate(image_rel_paths[warmup:], start=1):
         full_path = os.path.join(base_dir, rel_path)
-        true_label = 1 if 'person' in rel_path else 0
+        true_label = 1 if rel_path.startswith('person/') else 0
         
         t0 = time.perf_counter_ns()
         x = load_and_preprocess_image(full_path, (H, W))

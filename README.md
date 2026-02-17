@@ -222,6 +222,7 @@ All official latency measurements will be performed on the course Raspberry Pi u
 Both evaluation scripts include:
 - **Warmup phase**: 50 images (not counted in metrics)
 - **Latency percentiles**: p50, p90, p99
+- **Latency measurement**: Full pipeline timing (load + preprocess + inference + output)
 - **Fixed thread count**: Default 1 thread (configurable)
 - **Memory profiling**: Peak RSS tracking
 - **CPU governor check**: Recommends "performance" mode

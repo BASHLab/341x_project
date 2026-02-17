@@ -37,7 +37,7 @@ def create_generator_from_manifest(manifest_path, augment=False):
   
   # Create full paths and labels
   filepaths = [os.path.join(BASE_DIR, path) for path in image_paths]
-  labels = [0 if 'non_person' in path else 1 for path in image_paths]
+  labels = [0 if path.startswith('non_person/') else 1 for path in image_paths]
   
   if augment:
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(

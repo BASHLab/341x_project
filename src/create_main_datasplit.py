@@ -86,16 +86,15 @@ def main():
     write_manifest(out_dir / "test_public.txt", test_public_all)
 
     # 2) Hidden test manifest (separate seed)
-    # IMPORTANT: This does NOT ensure disjointness vs public split by itself.
-    # If you want disjoint hidden from public, we explicitly exclude public test entries.
-    public_test_set = set(test_public_all)
+    # Ensure hidden test is disjoint from ALL public splits (train/val/test_public)
+    exclude_set = set(train_all) | set(val_all) | set(test_public_all)
 
     test_hidden_all = []
     for cat in CATEGORIES:
         files = list_images(data_dir, cat)
 
-        # Exclude public test items so hidden isn't the same as public test
-        files = [f for f in files if f not in public_test_set]
+        # Exclude all public split items to ensure disjointness
+        files = [f for f in files if f not in exclude_set]
 
         rng_hid = random.Random(args.hidden_seed + (0 if cat == "person" else 1))
         rng_hid.shuffle(files)
@@ -112,6 +111,7 @@ def main():
     rng_hfinal = random.Random(args.hidden_seed)
     rng_hfinal.shuffle(test_hidden_all)
     write_manifest(out_dir / "test_hidden.txt", test_hidden_all)
+    
     # Sanity check: ensure disjointness
     assert not (set(test_hidden_all) & exclude_set), "Hidden test overlaps with public splits!"
     
@@ -130,7 +130,7 @@ def main():
     print(f"  train:       {len(train_all)}  (person={count_cat(train_all,'person')}, non_person={count_cat(train_all,'non_person')})")
     print(f"  val:         {len(val_all)}    (person={count_cat(val_all,'person')}, non_person={count_cat(val_all,'non_person')})")
     print(f"  test_public: {len(test_public_all)} (person={count_cat(test_public_all,'person')}, non_person={count_cat(test_public_all,'non_person')})")
-    print("Hidden test (seed = {}, disjoint from public test):".format(args.hidden_seed))
+    print("Hidden test (seed = {}, disjoint from ALL public splits):".format(args.hidden_seed))
     print(f"  test_hidden: {len(test_hidden_all)} (person={count_cat(test_hidden_all,'person')}, non_person={count_cat(test_hidden_all,'non_person')})")
     print("========================================")
 

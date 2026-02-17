@@ -118,7 +118,7 @@ def evaluate_keras_model(model_path, manifest_path):
     
     for rel_path in image_paths:
         full_path = os.path.join(BASE_DIR, rel_path)
-        true_label = 1 if 'person' in rel_path else 0
+        true_label = 1 if rel_path.startswith('person/') else 0
         
         img = load_and_preprocess_image(full_path, use_tflite=False)
         img_batch = np.expand_dims(img, axis=0)
@@ -177,23 +177,24 @@ def evaluate_tflite_model(model_path, manifest_path, measure_latency=True):
     print("[EVALUATION] Starting timed evaluation...")
     for idx, rel_path in enumerate(image_paths):
         full_path = os.path.join(BASE_DIR, rel_path)
-        true_label = 1 if 'person' in rel_path else 0
+        true_label = 1 if rel_path.startswith('person/') else 0
         
-        img = load_and_preprocess_image(full_path, use_tflite=True)
-        
-        # Time inference only (not preprocessing)
+        # Time full pipeline: preprocessing + inference + output retrieval
         if measure_latency:
             start_time = time.perf_counter()
+            img = load_and_preprocess_image(full_path, use_tflite=True)
             interpreter.set_tensor(input_details[0]['index'], img)
             interpreter.invoke()
+            output_data = interpreter.get_tensor(output_details[0]['index'])
+            pred_label = np.argmax(output_data[0])
             end_time = time.perf_counter()
             latencies.append((end_time - start_time) * 1000)  # Convert to ms
         else:
+            img = load_and_preprocess_image(full_path, use_tflite=True)
             interpreter.set_tensor(input_details[0]['index'], img)
             interpreter.invoke()
-        
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        pred_label = np.argmax(output_data[0])
+            output_data = interpreter.get_tensor(output_details[0]['index'])
+            pred_label = np.argmax(output_data[0])
         
         if pred_label == true_label:
             correct += 1
