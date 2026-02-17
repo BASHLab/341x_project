@@ -102,8 +102,6 @@ Ensure your directory structure looks like this:
 
 ## Training
 
-The training script now uses the manifest-based splits created by `create_main_datasplit.py`.
-
 ### GPU Setup on Cluster
 
 A common issue found when testing on the campus cluster is TensorFlow not recognizing or finding the GPU libraries. Not using a GPU when training could increase training time by more than 2x. These commands helped:
