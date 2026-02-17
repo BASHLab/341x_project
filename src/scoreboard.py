@@ -148,9 +148,13 @@ def evaluate_manifest(
 
     # Load image paths from manifest
     image_rel_paths = load_manifest(manifest_path)
+    total_available = len(image_rel_paths)
     
     if max_images is not None:
         image_rel_paths = image_rel_paths[:max_images + warmup]
+        print(f"\n[WARN] --max_images enabled: Evaluating only {len(image_rel_paths)} images")
+        print(f"[WARN] (includes {warmup} warmup images)")
+        print(f"[WARN] Full split has {total_available} images - results are NOT official!\n")
     
     print(f"[INFO] Loaded {len(image_rel_paths)} images from manifest")
     print(f"[INFO] Warmup: {warmup} images")
@@ -304,9 +308,13 @@ def evaluate_directory(
                 image_paths.append(os.path.join(class_dir, fname))
                 labels.append(label)
 
+    total_available = len(image_paths)
     if max_images is not None:
         image_paths = image_paths[:max_images + warmup]
         labels = labels[:max_images + warmup]
+        print(f"\n[WARN] --max_images enabled: Evaluating only {len(image_paths)} images")
+        print(f"[WARN] (includes {warmup} warmup images)")
+        print(f"[WARN] Full dataset has {total_available} images - results are NOT official!\n")
 
     print(f"[INFO] Found {len(image_paths)} images")
     print(f"[INFO] Warmup: {warmup} images")
@@ -438,6 +446,10 @@ def main():
     # Handle official mode (test_hidden)
     if args.official:
         args.split = "test_hidden"
+        # Force consistent threading for official evaluation
+        if args.threads != 1:
+            print(f"[WARN] Official mode requires --threads=1 for fairness. Overriding --threads={args.threads} to 1.")
+            args.threads = 1
         print("\n" + "="*60)
         print("🔒 OFFICIAL EVALUATION MODE - TEST_HIDDEN")
         print("="*60)
@@ -447,6 +459,9 @@ def main():
         print("  - Model selection")
         print("  - Hyperparameter tuning")
         print("  - Any form of training or validation")
+        print("Settings enforced for fairness:")
+        print(f"  - Threads: {args.threads} (locked)")
+        print(f"  - Warmup: {args.warmup} images")
         print("="*60 + "\n")
 
     # Determine evaluation mode
@@ -529,27 +544,50 @@ def main():
 
     # Compute score if requested
     score = None
+    macs_source = None
     if args.compute_score:
         # Try to load MACs from metadata JSON
         json_path = model_path.replace(".tflite", ".json")
-        macs_m = args.macs
+        macs_m = None
         
-        if macs_m is None and os.path.exists(json_path):
+        # Priority 1: Command-line flag
+        if args.macs is not None:
+            macs_m = args.macs
+            macs_source = "command-line flag"
+            print(f"[INFO] Using MACs from --macs flag: {macs_m} M")
+        # Priority 2: JSON metadata file
+        elif os.path.exists(json_path):
             try:
                 with open(json_path, 'r') as f:
                     metadata = json.load(f)
                 macs_m = metadata.get("macs_m")
-                print(f"[INFO] Loaded MACs from metadata: {macs_m} M")
-            except:
-                pass
+                if macs_m is not None:
+                    macs_source = f"metadata file ({os.path.basename(json_path)})"
+                    print(f"[INFO] Loaded MACs from {json_path}: {macs_m} M")
+                else:
+                    print(f"[WARN] Found {json_path} but 'macs_m' field is missing")
+            except Exception as e:
+                print(f"[WARN] Failed to read {json_path}: {e}")
         
+        # Fail if MACs not found
         if macs_m is None:
-            print("[WARN] MACs not provided. Cannot compute score.")
-            print("       Use --macs <value> or ensure .json metadata exists.")
-        else:
-            score = calculate_score(stats["accuracy"], size_mb, macs_m)
-            report["macs_m"] = macs_m
-            report["score"] = score
+            print("\n" + "="*60)
+            print("[ERROR] Cannot compute score: MACs not provided")
+            print("="*60)
+            print("Score computation requires MACs. Provide them via:")
+            print(f"  1. --macs <value> flag")
+            print(f"  2. Metadata JSON file: {json_path}")
+            print()
+            print("To generate metadata JSON, run on cluster:")
+            print(f"  python src/evaluate_vww.py --model {os.path.basename(model_path)} \\")
+            print(f"      --split test_public --compute_score --export_json")
+            print("="*60)
+            return 1  # Exit with error code
+        
+        score = calculate_score(stats["accuracy"], size_mb, macs_m)
+        report["macs_m"] = macs_m
+        report["macs_source"] = macs_source
+        report["score"] = score
 
     # Save report
     out_path = args.out.strip()
@@ -570,7 +608,12 @@ def main():
     print(f"Accuracy:     {report['accuracy']:.4f} ({report['accuracy']*100:.2f}%)")
     print(f"Images:       {report['correct']}/{report['total']}")
     print("-" * 60)
-    print("LATENCY (Total = Preprocess + Inference):")
+    
+    # Highlight official latency metric
+    p90_latency = report['latency_total_ms']['p90']
+    print(f"LATENCY (OFFICIAL): {p90_latency:.2f} ms (p90)")
+    print()
+    print("Detailed Latency Statistics (Total = Preprocess + Inference):")
     print(f"  Total:      p50={report['latency_total_ms']['p50']:.2f}ms  "
           f"p90={report['latency_total_ms']['p90']:.2f}ms  "
           f"p99={report['latency_total_ms']['p99']:.2f}ms")
@@ -585,10 +628,15 @@ def main():
     
     if score is not None:
         print("-" * 60)
-        print(f"MACs:         {report['macs_m']:.4f} M")
+        print(f"MACs:         {report['macs_m']:.4f} M (from {macs_source})")
         print(f"SCORE:        {score:.4f}")
     
     print("="*60)
+    
+    # Warnings
+    if max_images is not None:
+        print("\n⚠️  WARNING: --max_images was used - results are NOT official!")
+        print(f"   Only {report['total']} images evaluated (partial dataset)")
     
     # Pass/Fail check
     if report['accuracy'] < 0.80:

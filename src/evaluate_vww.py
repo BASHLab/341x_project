@@ -306,10 +306,23 @@ def main():
         # Get model size and MACs
         size_mb = os.path.getsize(args.model) / (1024 * 1024)
         macs_m = get_exact_macs(args.model)
+        macs_source = "TFLite model analysis" if macs_m is not None else None
         
         # Calculate score if requested
         score = None
-        if args.compute_score and macs_m is not None:
+        if args.compute_score:
+            if macs_m is None:
+                print("\n" + "="*60)
+                print("[ERROR] Cannot compute score: MACs computation failed")
+                print("="*60)
+                print("Failed to extract MACs from TFLite model.")
+                print("This may happen if:")
+                print("  - The model uses unsupported operations")
+                print("  - The tflite library is not installed")
+                print()
+                print("Try installing: pip install tflite")
+                print("="*60)
+                return 1  # Exit with error code
             score = calculate_score(accuracy, size_mb, macs_m)
         
         # Get peak memory
@@ -320,14 +333,26 @@ def main():
         latency_stats = {}
         size_mb = os.path.getsize(args.model) / (1024 * 1024)
         macs_m = None
+        macs_source = None
         score = None
         peak_memory_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
         
         if args.compute_score:
-            print("[WARN] Score computation requires TFLite model (not .h5)")
+            print("\n" + "="*60)
+            print("[ERROR] Cannot compute score with .h5 model")
+            print("="*60)
+            print("Score computation requires TFLite model for MACs calculation.")
+            print("Convert your model to TFLite first:")
+            print()
+            print("  converter = tf.lite.TFLiteConverter.from_keras_model(model)")
+            print("  tflite_model = converter.convert()")
+            print("  with open('model.tflite', 'wb') as f:")
+            print("      f.write(tflite_model)")
+            print("="*60)
+            return 1  # Exit with error code
     else:
         print("Error: Model must be .h5 (Keras) or .tflite format")
-        return
+        return 1
     
     # Print results
     print("\n" + "="*60)
@@ -339,11 +364,15 @@ def main():
     print(f"Model Size:   {size_mb:.4f} MB")
     
     if macs_m is not None:
-        print(f"MACs:         {macs_m:.4f} M")
+        print(f"MACs:         {macs_m:.4f} M (from {macs_source})")
     
     if latency_stats:
         print("-" * 60)
-        print("LATENCY STATISTICS (ms):")
+        # Highlight official latency metric
+        p90_latency = latency_stats['p90']
+        print(f"LATENCY (OFFICIAL): {p90_latency:.2f} ms (p90)")
+        print()
+        print("Detailed Latency Statistics (ms):")
         print(f"  Mean:       {latency_stats['mean']:.2f}")
         print(f"  p50:        {latency_stats['p50']:.2f}")
         print(f"  p90:        {latency_stats['p90']:.2f}")

@@ -190,6 +190,12 @@ The hidden test set is ONLY used for final competition scoring:
 python src/scoreboard.py --model models/vww_96.tflite --official --compute_score
 ```
 
+**Official Mode Enforcement:**
+- Requires `--official` flag to access test_hidden
+- Forces `--threads=1` for fair comparison (cannot be overridden)
+- Uses fixed warmup settings
+- Generates official competition results
+
 **IMPORTANT:** 
 - Use `val` split during development and model selection
 - Use `test_public` only for final evaluation before submission
@@ -211,7 +217,7 @@ Where:
 
 All teams must report:
 - **Accuracy (%)** - Top-1 accuracy on test set
-- **Latency (ms/image)** - Average inference time
+- **Latency (ms/image)** - p90 latency (official metric for grading)
 - **Model Size (MB)** - TFLite file size
 - **Peak RSS Memory (MB)** - Maximum memory usage
 - **MACs (M)** - Mega Multiply-Accumulate operations
@@ -226,7 +232,14 @@ For each image, timing includes:
 - `interpreter.invoke()`
 - Output retrieval and argmax
 
-All official latency measurements will be performed on the course Raspberry Pi using a fixed software environment.
+**Official Latency Metric: p90 (90th percentile)**
+
+The p90 latency is used for grading as it provides a robust measure that:
+- Excludes outliers (unlike max)
+- Represents typical worst-case performance
+- Is more stable than mean across runs
+
+All official latency measurements will be performed on the course Raspberry Pi using a fixed software environment with 1 thread and 50 warmup images.
 
 ### Evaluation Features
 
