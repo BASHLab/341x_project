@@ -19,6 +19,7 @@ Your task is to **compress and deploy** this model while balancing:
 A leaderboard will rank submissions based on a composite score. Latency will be graded separately.
 
 ## Quick Start: Environment Setup
+The setup of the environment about how to use the campus cluster is same as Lab 1 and Lab2. The main thing to focus on are the TF and Cuda versions that are compatible with the provided code. 
 To avoid version conflicts (especially with Keras 3 or GLIBCXX), use the provided conda environment:
 
 ```bash
@@ -32,6 +33,8 @@ DO NOT RUN:
 ```bash
 module load miniconda
 ```
+
+Students are most welcome to have different TF and Cuda version but note that many functions provided will not work out of the box and 
 
 ## Dataset Preparation
 
