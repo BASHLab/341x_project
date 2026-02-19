@@ -292,6 +292,8 @@ pts) - Insightful discussion of tradeoffs and bottlenecks (10 pts)
 | **ModuleNotFoundError: PIL** | Pillow is missing in env. | `pip install Pillow` |
 | **Skipping registering GPU...** | CUDA libraries not found. | Ensure you are on a GPU node and `LD_LIBRARY_PATH` is exported. |
 
+Please make sure that you are reading and udnerstanding the error that are coming up. Please don't take all the commands at face value. Please look at the code and understand what is happening and why you might be getting the errors. If you need help debugging please reach out to us as soon as you can. We are always available in office hours, lab hours, and are happy to schedule more time if needed. 
+
 ## Optimization Hints
 
 A standard "dense" model will likely get a poor score. You are expected to explore different strategies. You will need to research and modify your training/conversion code to implement these.
