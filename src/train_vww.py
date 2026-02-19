@@ -18,7 +18,7 @@ import tensorflow as tf
 assert tf.__version__.startswith('2')
 
 IMAGE_SIZE = 96
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 EPOCHS = 20
 
 BASE_DIR = os.path.join(os.getcwd(), 'vw_coco2014_96')
@@ -32,52 +32,62 @@ def load_manifest(manifest_path):
 
 
 def create_generator_from_manifest(manifest_path, augment=False):
-  """Create data generator from manifest file."""
+  """Create high-performance tf.data pipeline from manifest file."""
   image_paths = load_manifest(manifest_path)
   
   # Create full paths and labels
   filepaths = [os.path.join(BASE_DIR, path) for path in image_paths]
   labels = [0 if path.startswith('non_person/') else 1 for path in image_paths]
   
+  # 1. Create native tf.data dataset
+  generator = tf.data.Dataset.from_tensor_slices((filepaths, labels))
+  
+  # 2. Define parsing function
+  def parse_image(filename, label):
+      image = tf.io.read_file(filename)
+      image = tf.image.decode_jpeg(image, channels=3)
+      # convert_image_dtype automatically scales values from [0, 255] to [0.0, 1.0]
+      image = tf.image.convert_image_dtype(image, tf.float32)
+      image = tf.image.resize(image, [IMAGE_SIZE, IMAGE_SIZE])
+      # One-hot encode label to match 'categorical_crossentropy' in train_epochs
+      label = tf.one_hot(label, depth=2)
+      return image, label
+
+  # 3. Apply parsing (parallelized across CPU cores)
+  generator = generator.map(parse_image, num_parallel_calls=tf.data.AUTOTUNE)
+
+  # 4. Shuffle before batching
   if augment:
-    datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        rotation_range=10,
-        width_shift_range=0.05,
-        height_shift_range=0.05,
-        zoom_range=.1,
-        horizontal_flip=True,
-        rescale=1. / 255)
-  else:
-    datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        rescale=1. / 255)
+      generator = generator.shuffle(buffer_size=10000, reshuffle_each_iteration=True)
+
+  # 5. Batch the data
+  generator = generator.batch(BATCH_SIZE)
+
+  # 6. Apply augmentations on batched tensors (much faster)
+  if augment:
+      data_augmentation = tf.keras.Sequential([
+          tf.keras.layers.RandomFlip("horizontal"),
+          tf.keras.layers.RandomRotation(factor=10./360.), # 10 degrees rotation
+          tf.keras.layers.RandomTranslation(height_factor=0.05, width_factor=0.05),
+          tf.keras.layers.RandomZoom(height_factor=0.1, width_factor=0.1)
+      ])
+      generator = generator.map(lambda x, y: (data_augmentation(x, training=True), y),
+                                num_parallel_calls=tf.data.AUTOTUNE)
+
+  # 7. Prefetch for GPU optimization (fixes the bottleneck)
+  generator = generator.prefetch(buffer_size=tf.data.AUTOTUNE)
   
-  # Create dataframe for flow_from_dataframe
-  import pandas as pd
-  df = pd.DataFrame({'filename': filepaths, 'class': labels})
-  df['class'] = df['class'].astype(str)
-  
-  generator = datagen.flow_from_dataframe(
-      df,
-      x_col='filename',
-      y_col='class',
-      target_size=(IMAGE_SIZE, IMAGE_SIZE),
-      batch_size=BATCH_SIZE,
-      class_mode='categorical',
-      color_mode='rgb',
-      shuffle=augment)
+  # Hack to maintain compatibility with original print statement in main()
+  generator.class_indices = {'0': 0, '1': 1}
   
   return generator
 
 
 def main(argv):
-  if len(argv) >= 2:
-    model = tf.keras.models.load_model(argv[1])
-  else:
-    model = mobilenet_v1()
+  strategy = tf.distribute.MirroredStrategy()
+  print(f'Number of devices running in sync: {strategy.num_replicas_in_sync}')
 
-  model.summary()
-
-  # Load data from manifest files
+  # Load data generators (data pipeline creation stays outside the scope)
   train_generator = create_generator_from_manifest(
       os.path.join(SPLITS_DIR, 'train.txt'), augment=True)
   val_generator = create_generator_from_manifest(
@@ -85,11 +95,23 @@ def main(argv):
   
   print(train_generator.class_indices)
 
-  model = train_epochs(model, train_generator, val_generator, 20, 0.001)
-  model = train_epochs(model, train_generator, val_generator, 10, 0.0005)
-  model = train_epochs(model, train_generator, val_generator, 20, 0.00025)
+  # 2. Open the strategy scope. Everything related to model creation 
+  # and compilation MUST happen inside this block.
+  with strategy.scope():
+    if len(argv) >= 2:
+      model = tf.keras.models.load_model(argv[1])
+    else:
+      model = mobilenet_v1()
+      
+    model.summary()
 
-  # Save model HDF5
+    # We call train_epochs inside the scope so the internal model.compile() 
+    # correctly attaches the optimizer variables to both GPUs.
+    model = train_epochs(model, train_generator, val_generator, 20, 0.001)
+    model = train_epochs(model, train_generator, val_generator, 10, 0.0005)
+    model = train_epochs(model, train_generator, val_generator, 20, 0.00025)
+
+  # 3. Save the final model (can be safely done outside the scope)
   if len(argv) >= 3:
     model.save(argv[2])
   else:
