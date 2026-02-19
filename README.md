@@ -114,10 +114,14 @@ Ensure your directory structure looks like this:
 A common issue found when testing on the campus cluster is TensorFlow not recognizing or finding the GPU libraries. Not using a GPU when training could increase training time by more than 2x. These commands helped:
 
 ```bash
+# 1. Load the cluster's GPU software stack FIRST
+module load cuda12.2/toolkit/12.2.2
+module load cudnn8.9-cuda12.2/8.9.7.29
 # Point to your conda environment's library folder
 export LD_LIBRARY_PATH=$HOME/miniconda3/envs/vww_env/lib:$LD_LIBRARY_PATH
 # Help XLA find CUDA
-export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX
+export XLA_FLAGS=--xla_gpu_cuda_data_dir=$(dirname $(dirname $(which nvcc)))
+
 ```
 
 Make sure that you are using a GPU either through sinteractive or a slurm job when training!
