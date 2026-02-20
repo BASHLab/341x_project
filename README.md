@@ -24,7 +24,6 @@ To avoid version conflicts (especially with Keras 3 or GLIBCXX), use the provide
 
 ```bash
 module load gcc
-module load cuda
 conda env create -f env.yml python=3.11.7
 conda activate vww_env
 ```
