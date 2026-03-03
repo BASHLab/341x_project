@@ -30,7 +30,7 @@ conda activate vww_env
 
 DO NOT RUN: 
 ```bash
-module load miniconda
+module load cuda
 ```
 
 Students are most welcome to have different TF and Cuda version but note that many functions provided will not work out of the box and 
