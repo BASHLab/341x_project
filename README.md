@@ -41,8 +41,8 @@ The leaderboard ranks submissions based on a composite score described in a late
 | 17 | CamposJefferson | 0.9497 | 0.8494 | 0.437 | 7.4897 | 6.2947 |
 | 18 | TahirZiyad | 0.8787 | 0.8613 | 0.826 | 7.4897 | 5.8032 |
 | 19 | ClaybrookJake | 0.8620 | 0.8446 | 0.826 | 7.4897 | 5.8771 |
-| 20 | Trilling Adrian | 0.65 | 0.6436 | 0.887 | -- | -- |
-| 21 | SteinmetzJai | 0.65 | 0.6436 | 0.887 | -- | -- |
+| 20 | Trilling Adrian | 0.65 | 0.6436 | 0.887 | -- | -- | Predictive Coding with JAX |
+| 21 | SteinmetzJai | 0.65 | 0.6436 | 0.887 | -- | -- | Predictive Coding with JAX |
 
 
 ## Quick Start: Environment Setup
