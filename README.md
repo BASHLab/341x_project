@@ -23,24 +23,24 @@ The leaderboard ranks submissions based on a composite score described in a late
 | Rank | Student | Score | Accuracy | Model Size (MB) | MACs (M) | Latency Mean (ms) |Approach|
 |---:|---|---:|---:|---:|---:|---:|---:|
 | 1 | ShraybmanLeo | 1.2055 | 0.8585 | 0.068 | 2.5740 | 4.6067 | Architecture simplification (removed layers, reduced filters to 6, replaced FC with 1×1 conv) + QAT + INT8 post-training quantization|
-| 2 | FrazerColin | 1.1345 | 0.8518 | 0.110 | 5.3110 | 4.5229 | |
-| 3 | RustPaige | 1.0977 | 0.8558 | 0.152 | 3.2295 | 4.8716 | |
-| 4 | CaoPhong | 1.0814 | 0.8300 | 0.142 | 3.2295 | 4.1129 | |
-| 5 | NguyenThinh | 1.0812 | 0.8319 | 0.144 | 3.3674 | 5.0440 | |
-| 6 | MirzoyanRafael | 1.0546 | 0.8632 | 0.220 | 5.5958 | 4.6550 | |
-| 7 | ZorluElif | 1.0524 | 0.8427 | 0.193 | 4.4560 | 5.1826 | |
-| 8 | LeHuy | 1.0309 | 0.8649 | 0.256 | 11.2974 | 7.0658 | |
-| 9 | TianRuoshui | 1.0204 | 0.8569 | 0.269 | 7.4897 | 5.2593 | |
-| 10 | HughesRichard | 1.0160 | 0.8655 | 0.297 | 7.4897 | 6.2994 | |
-| 11 | FolsomCameron | 1.0117 | 0.8607 | 0.296 | 7.4897 | 5.4549 | |
-| 12 | GajariaDaksh | 1.0114 | 0.8603 | 0.296 | 7.4897 | 5.2884 | |
-| 13 | GleatonCameron | 1.0028 | 0.8016 | 0.197 | 10.4378 | 5.7636 | |
-| 14 | AkandeIsaac | 0.9960 | 0.8448 | 0.296 | 7.4897 | 6.6110 | |
-| 15 | PhungDoanh | 0.9829 | 0.8319 | 0.296 | 7.4897 | 5.2825 | |
-| 16 | LopezJeffrey | 0.9616 | 0.8612 | 0.437 | 7.4897 | 5.9752 | |
-| 17 | CamposJefferson | 0.9497 | 0.8494 | 0.437 | 7.4897 | 6.2947 | |
-| 18 | TahirZiyad | 0.8787 | 0.8613 | 0.826 | 7.4897 | 5.8032 | |
-| 19 | ClaybrookJake | 0.8620 | 0.8446 | 0.826 | 7.4897 | 5.8771 | |
+| 2 | FrazerColin | 1.1345 | 0.8518 | 0.110 | 5.3110 | 4.5229 | Reduced filter count + removed last 4 layers to cut MACs ~30% + INT8 post-training quantization |
+| 3 | RustPaige | 1.0977 | 0.8558 | 0.152 | 3.2295 | 4.8716 | Structured channel pruning (α=0.6, 60% filters retained) + multi-stage fine-tuning + QAT + INT8 quantization |
+| 4 | CaoPhong | 1.0814 | 0.8300 | 0.142 | 3.2295 | 4.1129 | Hyperparameter-tuned baseline + structured channel pruning (b5 config) + INT8 post-training quantization|
+| 5 | NguyenThinh | 1.0812 | 0.8319 | 0.144 | 3.3674 | 5.0440 | Structured pruning (reduced filters) + INT8 post-training quantization|
+| 6 | MirzoyanRafael | 1.0546 | 0.8632 | 0.220 | 5.5958 | 4.6550 | Structured pruning (reduced filters) + INT8 post-training quantization |
+| 7 | ZorluElif | 1.0524 | 0.8427 | 0.193 | 4.4560 | 5.1826 |Structured pruning (reduced MACs ~40%) + INT8 quantization |
+| 8 | LeHuy | 1.0309 | 0.8649 | 0.256 | 11.2974 | 7.0658 | Width scaling (filters=10) + magnitude pruning (8% sparsity) with warm-up + multi-stage LR schedule + INT8 post-training quantization |
+| 9 | TianRuoshui | 1.0204 | 0.8569 | 0.269 | 7.4897 | 5.2593 | Progressive LR schedule + data augmentation (flips, rotations, zoom) + INT8 post-training quantization|
+| 10 | HughesRichard | 1.0160 | 0.8655 | 0.297 | 7.4897 | 6.2994 | QAT + INT8 quantization |
+| 11 | FolsomCameron | 1.0117 | 0.8607 | 0.296 | 7.4897 | 5.4549 | INT8 post-training quantization with representative dataset calibration |
+| 12 | GajariaDaksh | 1.0114 | 0.8603 | 0.296 | 7.4897 | 5.2884 | INT8 post-training quantization |
+| 13 | GleatonCameron | 1.0028 | 0.8016 | 0.197 | 10.4378 | 5.7636 | INT8 post-training quantization  |
+| 14 | AkandeIsaac | 0.9960 | 0.8448 | 0.296 | 7.4897 | 6.6110 | INT8 post-training quantization |
+| 15 | PhungDoanh | 0.9829 | 0.8319 | 0.296 | 7.4897 | 5.2825 | INT8 post-training quantization |
+| 16 | LopezJeffrey | 0.9616 | 0.8612 | 0.437 | 7.4897 | 5.9752 | INT8 post-training quantization|
+| 17 | CamposJefferson | 0.9497 | 0.8494 | 0.437 | 7.4897 | 6.2947 | FP16 post-training quantization |
+| 18 | TahirZiyad | 0.8787 | 0.8613 | 0.826 | 7.4897 | 5.8032 | INT8 post-training quantization |
+| 19 | ClaybrookJake | 0.8620 | 0.8446 | 0.826 | 7.4897 | 5.8771 | Magnitude-based weight pruning + INT8 post-training quantization|
 | 20 | Trilling Adrian | 0.65 | 0.6436 | 0.887 | -- | -- | Predictive Coding with JAX |
 | 21 | SteinmetzJai | 0.65 | 0.6436 | 0.887 | -- | -- | Predictive Coding with JAX |
 
