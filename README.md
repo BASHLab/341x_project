@@ -22,7 +22,7 @@ The leaderboard ranks submissions based on a composite score described in a late
 
 | Rank | Student | Score | Accuracy | Model Size (MB) | MACs (M) | Latency Mean (ms) |Approach|
 |---:|---|---:|---:|---:|---:|---:|---:|
-| 1 | ShraybmanLeo | 1.2055 | 0.8585 | 0.068 | 2.5740 | 4.6067 | |
+| 1 | ShraybmanLeo | 1.2055 | 0.8585 | 0.068 | 2.5740 | 4.6067 | Architecture simplification (removed layers, reduced filters to 6, replaced FC with 1×1 conv) + QAT + INT8 post-training quantization|
 | 2 | FrazerColin | 1.1345 | 0.8518 | 0.110 | 5.3110 | 4.5229 | |
 | 3 | RustPaige | 1.0977 | 0.8558 | 0.152 | 3.2295 | 4.8716 | |
 | 4 | CaoPhong | 1.0814 | 0.8300 | 0.142 | 3.2295 | 4.1129 | |
