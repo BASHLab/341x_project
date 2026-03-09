@@ -20,8 +20,8 @@ Your task is to **compress and deploy** this model while balancing:
 ## 🏆 Leaderboard
 The leaderboard ranks submissions based on a composite score described in a later section. 
 
-| Rank | Student | Score | Accuracy | Model Size (MB) | MACs (M) | Latency Mean (ms) |
-|---:|---|---:|---:|---:|---:|---:|
+| Rank | Student | Score | Accuracy | Model Size (MB) | MACs (M) | Latency Mean (ms) |Approach|
+|---:|---|---:|---:|---:|---:|---:|---:|
 | 1 | ShraybmanLeo | 1.2055 | 0.8585 | 0.068 | 2.5740 | 4.6067 |
 | 2 | FrazerColin | 1.1345 | 0.8518 | 0.110 | 5.3110 | 4.5229 |
 | 3 | RustPaige | 1.0977 | 0.8558 | 0.152 | 3.2295 | 4.8716 |
@@ -41,6 +41,9 @@ The leaderboard ranks submissions based on a composite score described in a late
 | 17 | CamposJefferson | 0.9497 | 0.8494 | 0.437 | 7.4897 | 6.2947 |
 | 18 | TahirZiyad | 0.8787 | 0.8613 | 0.826 | 7.4897 | 5.8032 |
 | 19 | ClaybrookJake | 0.8620 | 0.8446 | 0.826 | 7.4897 | 5.8771 |
+| 20 | Trilling Adrian | 0.65 | 0.6436 | 0.887 | -- | -- |
+| 21 | SteinmetzJai | 0.65 | 0.6436 | 0.887 | -- | -- |
+
 
 ## Quick Start: Environment Setup
 The setup of the environment about how to use the campus cluster is same as Lab 1 and Lab2. The main thing to focus on are the TF and Cuda versions that are compatible with the provided code. 
